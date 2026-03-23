@@ -8,7 +8,8 @@
       "WebFetch(domain:hub.docker.com)",
       "WebFetch(domain:tailscale.com)",
       "WebFetch(domain:docs.couchdb.org)",
-      "WebSearch"
+      "WebSearch",
+      "WebFetch(domain:registry.hub.docker.com)"
     ]
   }
 }

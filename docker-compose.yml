@@ -16,6 +16,7 @@ services:
     environment:
       - COUCHDB_USER=${COUCHDB_USER:?Set COUCHDB_USER in .env}
       - COUCHDB_PASSWORD=${COUCHDB_PASSWORD:?Set COUCHDB_PASSWORD in .env}
+      - COUCHDB_SECRET=${COUCHDB_SECRET:-}
 
     volumes:
       - ${COUCHDB_DATA_PATH:-./couchdb-data}:/opt/couchdb/data
@@ -26,19 +27,27 @@ services:
       - "127.0.0.1:5984:5984"
 
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://127.0.0.1:5984/_up || exit 1"]
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/127.0.0.1/5984' || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 3
       start_period: 60s
 
-    # Security: drop all capabilities, prevent privilege escalation.
-    # The entrypoint starts as root for chown, then drops to uid 5984
-    # via setpriv. cap_drop + no-new-privileges hardens after that point.
+    # Security: drop all capabilities except the 4 the entrypoint needs.
+    # The entrypoint starts as root for chown/chmod (CHOWN, FOWNER),
+    # then drops to uid 5984 via setpriv (SETUID, SETGID).
+    # This removes 10 unnecessary default Docker capabilities.
+    # Note: curl is not in the CouchDB image (purged after build),
+    # so the healthcheck uses a bash TCP probe instead.
     security_opt:
       - no-new-privileges:true
     cap_drop:
       - ALL
+    cap_add:
+      - CHOWN
+      - FOWNER
+      - SETUID
+      - SETGID
 
     # Give CouchDB time to flush writes on slow SD card before SIGKILL
     stop_grace_period: 30s

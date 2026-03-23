@@ -66,14 +66,12 @@ while ! curl -sf "${COUCH_HOST}/_up" -o /dev/null 2>/dev/null; do
     ELAPSED=$((ELAPSED + 2))
 done
 
-VERSION=$(curl -sf "${COUCH_HOST}/" | grep -o '"version":"[^"]*"' | cut -d'"' -f4)
-ok "CouchDB ${VERSION} is ready (${ELAPSED}s)"
+VERSION=$(couch_curl_verbose "${COUCH_HOST}/" 2>/dev/null | grep -o '"version":"[^"]*"' | cut -d'"' -f4)
+ok "CouchDB ${VERSION:-unknown} is ready (${ELAPSED}s)"
 
 # --- Idempotency check ---
 log "Checking if already initialized ..."
-HTTP_CODE=$(couch_curl -o /dev/null -w "%{http_code}" "${COUCH_HOST}/_users" 2>/dev/null || echo "000")
-
-if [[ "$HTTP_CODE" == "200" ]]; then
+if couch_curl -o /dev/null "${COUCH_HOST}/_users" 2>/dev/null; then
     ok "CouchDB is already initialized (_users database exists). Skipping cluster setup."
     ALREADY_INIT=true
 else
@@ -96,11 +94,10 @@ fi
 # --- Verify system databases ---
 log "Verifying system databases ..."
 for db in _users _replicator _global_changes; do
-    HTTP_CODE=$(couch_curl -o /dev/null -w "%{http_code}" "${COUCH_HOST}/${db}" 2>/dev/null || echo "000")
-    if [[ "$HTTP_CODE" == "200" ]]; then
+    if couch_curl -o /dev/null "${COUCH_HOST}/${db}" 2>/dev/null; then
         ok "$db exists"
     else
-        fail "$db missing (HTTP $HTTP_CODE)"
+        fail "$db missing"
     fi
 done
 

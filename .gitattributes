@@ -1,0 +1,9 @@
+# Force LF line endings for files that run on Linux (Raspberry Pi).
+# Without this, Windows git (core.autocrlf=true) could produce CRLF,
+# which breaks bash shebangs on the Pi: "/usr/bin/env bash\r: not found"
+*.sh text eol=lf
+*.ini text eol=lf
+
+# Keep compose and env files consistent
+docker-compose.yml text eol=lf
+.env.example text eol=lf

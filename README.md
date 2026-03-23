@@ -26,11 +26,14 @@ Persistent data on disk
 - **Docker** and **Docker Compose v2** (`docker compose version`)
 - **Tailscale** installed and connected to your tailnet
 - All client devices (phones, laptops) on the same Tailscale network
+- User in the `docker` group (`sudo usermod -aG docker $USER`) or use `sudo` for docker commands
 
 ## Quick Start
 
 ```bash
 # 1. Clone to the Pi
+sudo mkdir -p /srv/obsidian-livesync
+sudo chown $USER:$USER /srv/obsidian-livesync
 git clone <this-repo> /srv/obsidian-livesync
 cd /srv/obsidian-livesync
 
@@ -43,11 +46,10 @@ chmod 600 .env                     # Restrict file permissions
 docker compose up -d
 
 # 4. Initialize (first time only)
-chmod +x scripts/couchdb-init.sh
 ./scripts/couchdb-init.sh
 
-# 5. Enable HTTPS via Tailscale
-tailscale serve --bg 5984
+# 5. Enable HTTPS via Tailscale (requires sudo)
+sudo tailscale serve --bg 5984
 
 # 6. Verify
 curl -u <user>:<pass> http://127.0.0.1:5984/_up   # Local check
@@ -73,14 +75,15 @@ scripts/
 `tailscale serve` acts as a reverse proxy with automatic trusted HTTPS:
 
 ```bash
-# Enable (persists across reboots)
-tailscale serve --bg 5984
+# Enable (persists across reboots, requires sudo)
+sudo tailscale serve --bg 5984
 
 # Check status
-tailscale serve status
+sudo tailscale serve status
 
-# Disable
-tailscale serve --bg --remove 5984
+# Disable (syntax varies by Tailscale version; try one of these)
+sudo tailscale serve reset
+# or: sudo tailscale serve off
 ```
 
 This gives you `https://<pi-hostname>.<tailnet>.ts.net` with a real Let's Encrypt certificate. No extra containers, no cert management, no public internet exposure.
@@ -127,7 +130,7 @@ Use the **Setup wizard** in the plugin for recommended settings.
 # Manual backup
 ./scripts/backup.sh
 
-# Automated daily backup at 3 AM (add to crontab -e)
+# Automated daily backup at 3 AM (add to root crontab: sudo crontab -e)
 0 3 * * * cd /srv/obsidian-livesync && ./scripts/backup.sh >> backups/backup.log 2>&1
 ```
 
@@ -141,6 +144,8 @@ rm -rf couchdb-data/*
 tar -xzf backups/backup-YYYYMMDD-HHMMSS.tar.gz
 docker compose up -d
 ```
+
+> **Note:** If you set a custom `COUCHDB_DATA_PATH` in `.env` (e.g., `/mnt/ssd/couchdb-data`), extract the backup to that location instead: `tar -xzf backups/backup-... -C /mnt/ssd/`
 
 ## Operations
 
@@ -220,7 +225,7 @@ This deployment is hardened with multiple layers:
 | Transport | Trusted HTTPS via Let's Encrypt |
 | Port | CouchDB bound to `127.0.0.1` only |
 | Auth | `require_valid_user = true` (no anonymous access) |
-| Container | `cap_drop: ALL` + `no-new-privileges` |
+| Container | `cap_drop: ALL` + minimal `cap_add` + `no-new-privileges` |
 | CORS | Restricted to Obsidian app origins |
 | Request size | 64 MB limit (prevents memory exhaustion) |
 | Secrets | `.env` gitignored, `chmod 600` |
