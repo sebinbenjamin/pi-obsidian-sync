@@ -56,7 +56,7 @@ fi
 log "Waiting for CouchDB at ${COUCH_HOST} ..."
 TIMEOUT=60
 ELAPSED=0
-while ! curl -sf "${COUCH_HOST}/_up" -o /dev/null 2>/dev/null; do
+while ! couch_curl "${COUCH_HOST}/_up" -o /dev/null 2>/dev/null; do
     if (( ELAPSED >= TIMEOUT )); then
         echo "ERROR: CouchDB did not become ready within ${TIMEOUT}s."
         echo "Check: docker compose ps / docker compose logs couchdb"
