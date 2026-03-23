@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(find /d/workspace/personal/pi-obsidian -not -path */.git/* -type f)",
+      "WebFetch(domain:api.github.com)",
+      "WebFetch(domain:hub.docker.com)",
+      "WebFetch(domain:tailscale.com)",
+      "WebFetch(domain:docs.couchdb.org)",
+      "WebSearch"
+    ]
+  }
+}

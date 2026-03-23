@@ -1,0 +1,14 @@
+# Environment secrets
+.env
+
+# CouchDB runtime data (only exists on Pi)
+couchdb-data/
+
+# Backup artifacts
+backups/
+
+# OS / editor artifacts
+.DS_Store
+Thumbs.db
+*.swp
+*~
