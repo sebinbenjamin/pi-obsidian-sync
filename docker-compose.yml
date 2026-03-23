@@ -20,7 +20,7 @@ services:
 
     volumes:
       - ${COUCHDB_DATA_PATH:-./couchdb-data}:/opt/couchdb/data
-      - ./couchdb/local.ini:/opt/couchdb/etc/local.d/livesync.ini:ro
+      - ./couchdb/local.ini:/opt/couchdb/etc/local.d/001-livesync.ini
 
     # Localhost only; tailscale serve handles external HTTPS access
     ports:
@@ -33,18 +33,16 @@ services:
       retries: 3
       start_period: 60s
 
-    # Security: drop all capabilities except the 4 the entrypoint needs.
-    # The entrypoint starts as root for chown/chmod (CHOWN, FOWNER),
-    # then drops to uid 5984 via setpriv (SETUID, SETGID).
-    # This removes 10 unnecessary default Docker capabilities.
-    # Note: curl is not in the CouchDB image (purged after build),
-    # so the healthcheck uses a bash TCP probe instead.
+    # Drop all caps except the 5 the entrypoint needs (chown/chmod, write
+    # docker.ini, then setpriv to uid 5984). No :ro on local.ini — entrypoint
+    # chowns config files and crashes if read-only (couchdb-docker#192, #204).
     security_opt:
       - no-new-privileges:true
     cap_drop:
       - ALL
     cap_add:
       - CHOWN
+      - DAC_OVERRIDE
       - FOWNER
       - SETUID
       - SETGID

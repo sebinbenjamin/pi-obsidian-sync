@@ -301,7 +301,7 @@ The `local.ini` file may not be mounted correctly:
 
 ```bash
 # Verify the mount
-docker compose exec couchdb cat /opt/couchdb/etc/local.d/livesync.ini
+docker compose exec couchdb cat /opt/couchdb/etc/local.d/001-livesync.ini
 
 # If missing, check the path in docker-compose.yml volumes
 docker compose restart couchdb
