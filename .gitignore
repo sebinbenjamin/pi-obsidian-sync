@@ -7,6 +7,9 @@ couchdb-data/
 # Backup artifacts
 backups/
 
+# age private key (if generated in project directory)
+age-key*
+
 # OS / editor artifacts
 .DS_Store
 Thumbs.db

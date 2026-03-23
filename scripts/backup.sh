@@ -3,7 +3,7 @@
 # Creates a timestamped tarball and removes old backups beyond retention.
 #
 # CouchDB uses append-only storage; file-level copy while running
-# is safe — CouchDB will recover from any partial writes on restore.
+# is safe: CouchDB will recover from any partial writes on restore.
 #
 # Usage:
 #   ./scripts/backup.sh

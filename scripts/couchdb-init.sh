@@ -2,7 +2,7 @@
 # One-time CouchDB cluster initialization for Obsidian LiveSync.
 # Run this ONCE after the first `docker compose up -d`.
 #
-# This script is idempotent — safe to run multiple times.
+# This script is idempotent: safe to run multiple times.
 # It sources .env for credentials, so no secrets are hardcoded.
 #
 # Usage:

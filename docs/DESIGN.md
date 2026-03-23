@@ -1,4 +1,6 @@
-# Obsidian LiveSync Self-Hosted Setup Plan
+# Design Rationale
+
+> This document captures the design rationale, architecture decisions, and phased deployment strategy for this project. It was written during the initial planning phase and is preserved here as reference for understanding why specific choices were made, particularly around Android compatibility and secure networking.
 
 **Raspberry Pi + CouchDB + Tailscale + Trusted HTTPS + Android-safe rollout**
 
@@ -14,17 +16,17 @@ Set up a **self-hosted Obsidian sync system** using:
 - plugin **setup wizard / setup URI**
 - **Request API** fallback if Android or CORS issues appear
 
-This plan is designed to maximise the chances of **Android working reliably**, based on the issues and documentation we reviewed.
+This design maximises the chances of **Android working reliably**, based on the issues and documentation reviewed.
 
 ---
 
 ## 2. Why this architecture
 
-## Truth
+### Truth
 
 A plain Pi + CouchDB setup is **not enough** for Android.
 
-What we learned:
+Key findings:
 
 - Android cannot reliably use a plain `http://` endpoint.
 - Android also cannot reliably use a **self-signed certificate**.
@@ -39,11 +41,11 @@ What we learned:
   - **setup wizard / setup URI**
   - **Use Request API** if needed to work around CORS/fetch problems
 
-## Nuance
+### Nuance
 
 Trusted HTTPS is **necessary but not sufficient**.
 
-So the plan must reduce risk across all of these layers:
+The design must reduce risk across all of these layers:
 
 - transport security
 - DNS consistency
@@ -53,9 +55,9 @@ So the plan must reduce risk across all of these layers:
 - Android-first risk mitigation
 - backups before trusting production notes
 
-## Decision
+### Decision
 
-We will use:
+This project uses:
 
 - **Pi**
 - **Docker CouchDB**
@@ -103,7 +105,7 @@ Persistent Docker volume / SSD storage
 
 ## 4. Goals
 
-## Primary goals
+### Primary goals
 
 - Reliable sync between:
   - Android phone
@@ -116,7 +118,7 @@ Persistent Docker volume / SSD storage
 - Reproducible setup using setup URI
 - Backed-up server data
 
-## Secondary goals
+### Secondary goals
 
 - Minimal operational complexity
 - Easy onboarding of additional devices
@@ -127,7 +129,7 @@ Persistent Docker volume / SSD storage
 
 ## 5. Non-goals for v1
 
-We will **not** aim for these in v1:
+**Not** in scope for v1:
 
 - public internet access without Tailscale
 - complex public reverse proxy chains
@@ -142,9 +144,9 @@ We will **not** aim for these in v1:
 
 ## 6. Main risks
 
-## Known risks
+### Known risks
 
-### 1. Android transport constraints
+#### 1. Android transport constraints
 
 Android requires:
 
@@ -152,7 +154,7 @@ Android requires:
 - no self-signed cert
 - no plain HTTP
 
-### 2. CORS / proxy configuration
+#### 2. CORS / proxy configuration
 
 Even with HTTPS, sync may fail if:
 
@@ -161,7 +163,7 @@ Even with HTTPS, sync may fail if:
 - redirects are introduced
 - host forwarding is wrong
 
-### 3. Mobile-specific behaviour
+#### 3. Mobile-specific behaviour
 
 Android may still show:
 
@@ -170,7 +172,7 @@ Android may still show:
 - intermittent failures
 - local storage / IndexedDB style issues
 
-### 4. Data integrity risk
+#### 4. Data integrity risk
 
 Like any sync system:
 
@@ -178,7 +180,7 @@ Like any sync system:
 - plugin bugs or restore bugs may surface
 - first sync on a real vault is risky without testing
 
-### 5. Operational complexity
+#### 5. Operational complexity
 
 This is a power-user setup, not a consumer appliance setup.
 
@@ -186,9 +188,9 @@ This is a power-user setup, not a consumer appliance setup.
 
 ## 7. Project phases
 
-## Phase 0: Preparation
+### Phase 0: Preparation
 
-### Deliverables
+#### Deliverables
 
 - Pi available and stable
 - Docker already installed
@@ -197,7 +199,7 @@ This is a power-user setup, not a consumer appliance setup.
 - backup path decided
 - test vault ready
 
-### Tasks
+#### Tasks
 
 - confirm Pi hostname
 - confirm Tailscale connectivity from all client devices
@@ -209,7 +211,7 @@ This is a power-user setup, not a consumer appliance setup.
 /srv/obsidian-livesync
 ```
 
-### Exit criteria
+#### Exit criteria
 
 - Pi is reachable over Tailscale
 - Docker works
@@ -218,13 +220,13 @@ This is a power-user setup, not a consumer appliance setup.
 
 ---
 
-## Phase 1: CouchDB deployment
+### Phase 1: CouchDB deployment
 
-### Goal
+#### Goal
 
 Deploy a clean CouchDB backend on the Pi.
 
-### Tasks
+#### Tasks
 
 - create `docker-compose.yml`
 - create persistent storage volume
@@ -232,7 +234,7 @@ Deploy a clean CouchDB backend on the Pi.
 - start CouchDB container
 - validate container health locally
 
-### Suggested directory layout
+#### Suggested directory layout
 
 ```text
 /srv/obsidian-livesync/
@@ -241,7 +243,9 @@ Deploy a clean CouchDB backend on the Pi.
   backups/
 ```
 
-### Example compose file
+#### Example compose file
+
+> **Note:** This was the initial planning sketch. The actual `docker-compose.yml` in the repo root includes additional security hardening, health checks, resource limits, and environment variable support.
 
 ```yaml
 version: "3.8"
@@ -260,14 +264,14 @@ services:
       - "5984:5984"
 ```
 
-### Validation
+#### Validation
 
 - `docker ps`
 - local access to CouchDB
 - persistent storage mounted
 - restart test passes
 
-### Exit criteria
+#### Exit criteria
 
 - CouchDB is running
 - local access works
@@ -275,17 +279,17 @@ services:
 
 ---
 
-## Phase 2: Trusted HTTPS endpoint on stable DNS name
+### Phase 2: Trusted HTTPS endpoint on stable DNS name
 
-### Goal
+#### Goal
 
 Provide a **trusted HTTPS endpoint** suitable for Android.
 
-## Key requirement
+#### Key requirement
 
 This is mandatory for Android compatibility.
 
-### Design requirements
+#### Design requirements
 
 - stable DNS name
 - trusted certificate
@@ -293,7 +297,7 @@ This is mandatory for Android compatibility.
 - no redirect loops
 - no subpath complexity if avoidable
 
-### Recommended shape
+#### Recommended shape
 
 Use a dedicated hostname for sync, for example:
 
@@ -303,7 +307,7 @@ https://obsidian-sync.<stable-domain-or-tailnet-name>
 
 or equivalent stable DNS name that resolves consistently for all devices.
 
-### Rules
+#### Rules
 
 - no self-signed cert
 - no raw `http://`
@@ -311,7 +315,7 @@ or equivalent stable DNS name that resolves consistently for all devices.
 - avoid connecting via bare IP if certificate is for hostname
 - keep endpoint shape stable from day one
 
-### Validation
+#### Validation
 
 From desktop and Android:
 
@@ -320,7 +324,7 @@ From desktop and Android:
 - verify certificate is trusted
 - verify no redirect loop
 
-### Exit criteria
+#### Exit criteria
 
 - Android browser can open endpoint over HTTPS
 - no cert warnings
@@ -328,13 +332,13 @@ From desktop and Android:
 
 ---
 
-## Phase 3: Reverse proxy and request path hardening
+### Phase 3: Reverse proxy and request path hardening
 
-### Goal
+#### Goal
 
 Make the path between client and CouchDB predictable.
 
-### Principles
+#### Principles
 
 - keep proxy logic minimal
 - do not add unnecessary layers
@@ -342,7 +346,7 @@ Make the path between client and CouchDB predictable.
 - no subpath routing if avoidable
 - avoid path rewriting tricks
 
-### CORS strategy
+#### CORS strategy
 
 Important:
 
@@ -354,7 +358,7 @@ Important:
 
 - avoid mishandling `OPTIONS`
 
-### Request API strategy
+#### Request API strategy
 
 Use **normal mode first** if setup is clean.
 
@@ -365,7 +369,7 @@ Enable **Request API** if:
 - behaviour differs between browser and plugin
 - desktop works but Android does not
 
-### Exit criteria
+#### Exit criteria
 
 - HTTPS endpoint works without browser issues
 - no redirect loops
@@ -373,13 +377,13 @@ Enable **Request API** if:
 
 ---
 
-## Phase 4: Desktop test vault rollout
+### Phase 4: Desktop test vault rollout
 
-### Goal
+#### Goal
 
 Prove the stack works on desktop before Android.
 
-### Tasks
+#### Tasks
 
 - create a small throwaway Obsidian vault
 - install Self-hosted LiveSync plugin on one desktop
@@ -387,13 +391,13 @@ Prove the stack works on desktop before Android.
 - connect to the trusted HTTPS endpoint
 - complete initial sync
 
-### Rules
+#### Rules
 
 - do not use the real vault yet
 - do not configure multiple devices yet
 - do not enable additional sync tools on this vault
 
-### Validation tests
+#### Validation tests
 
 - create a note
 - edit a note
@@ -404,7 +408,7 @@ Prove the stack works on desktop before Android.
 - restart Obsidian and verify state
 - restart Pi and verify sync still works
 
-### Exit criteria
+#### Exit criteria
 
 - desktop sync is stable
 - no unexplained errors
@@ -412,37 +416,37 @@ Prove the stack works on desktop before Android.
 
 ---
 
-## Phase 5: Setup URI generation
+### Phase 5: Setup URI generation
 
-### Goal
+#### Goal
 
 Use setup URI to reduce configuration errors on additional devices.
 
-### Tasks
+#### Tasks
 
 - once desktop is stable, generate the plugin setup URI
 - store it securely
 - document how to reuse it for new devices
 
-### Rules
+#### Rules
 
 - do not hand-configure every device from scratch unless necessary
 - use the same canonical configuration
 
-### Exit criteria
+#### Exit criteria
 
 - setup URI available
 - setup can be repeated consistently
 
 ---
 
-## Phase 6: Android test vault rollout
+### Phase 6: Android test vault rollout
 
-### Goal
+#### Goal
 
 Validate Android behaviour before using real notes.
 
-### Tasks
+#### Tasks
 
 - install Obsidian on Android
 - open the same small test vault pattern locally
@@ -451,7 +455,7 @@ Validate Android behaviour before using real notes.
 - connect to trusted HTTPS endpoint
 - test initial sync
 
-### Validation tests
+#### Validation tests
 
 - sync existing notes from desktop
 - create a note on Android and verify desktop receives it
@@ -464,7 +468,7 @@ Validate Android behaviour before using real notes.
 - test after phone sleep / wake
 - test after Pi restart
 
-### Failure-response plan
+#### Failure-response plan
 
 If Android fails:
 
@@ -477,7 +481,7 @@ If Android fails:
 7. retest
 8. inspect logs
 
-### Exit criteria
+#### Exit criteria
 
 - Android can sync test vault reliably
 - no repeated fetch failures
@@ -485,42 +489,42 @@ If Android fails:
 
 ---
 
-## Phase 7: Multi-device rollout
+### Phase 7: Multi-device rollout
 
-### Goal
+#### Goal
 
 Add the rest of your laptops after desktop + Android are proven.
 
-### Tasks
+#### Tasks
 
 - onboard one additional device at a time
 - use setup URI
 - test basic sync after each addition
 
-### Rules
+#### Rules
 
 - no mass onboarding
 - validate each device before adding the next
 - avoid simultaneous heavy editing during rollout
 
-### Exit criteria
+#### Exit criteria
 
 - all intended devices connected
 - all pass the basic sync validation set
 
 ---
 
-## Phase 8: Real vault migration
+### Phase 8: Real vault migration
 
-### Goal
+#### Goal
 
 Move from test vault to production vault safely.
 
-### Preconditions
+#### Preconditions
 
 All earlier phases must be green.
 
-### Tasks
+#### Tasks
 
 - back up current real vault
 - back up Pi-side CouchDB data
@@ -528,13 +532,13 @@ All earlier phases must be green.
 - onboard real vault through the validated workflow
 - monitor carefully for several days
 
-### Rules
+#### Rules
 
 - do not migrate without verified backups
 - do not edit the same note on multiple devices during the first few days
 - do not add unrelated plugin experiments at the same time
 
-### Exit criteria
+#### Exit criteria
 
 - production vault syncs correctly across devices
 - no unexplained missing files
@@ -545,7 +549,7 @@ All earlier phases must be green.
 
 ## 8. Validation checklist
 
-## Infrastructure validation
+### Infrastructure validation
 
 - [ ] Pi stable
 - [ ] Docker persistent
@@ -557,7 +561,7 @@ All earlier phases must be green.
 - [ ] no redirect loop
 - [ ] no certificate mismatch
 
-## Desktop validation
+### Desktop validation
 
 - [ ] initial sync works
 - [ ] note create/edit/delete works
@@ -566,7 +570,7 @@ All earlier phases must be green.
 - [ ] restart survives
 - [ ] reconnection after Pi restart works
 
-## Android validation
+### Android validation
 
 - [ ] endpoint opens in browser
 - [ ] no cert warning
@@ -579,7 +583,7 @@ All earlier phases must be green.
 - [ ] no repeated fetch failure
 - [ ] Request API tested if needed
 
-## Production readiness validation
+### Production readiness validation
 
 - [ ] backups configured
 - [ ] restore procedure documented
@@ -590,7 +594,7 @@ All earlier phases must be green.
 
 ## 9. Backup plan
 
-## Principle
+### Principle
 
 Sync is not backup.
 
@@ -647,7 +651,7 @@ Sync is not backup.
 
 ## 11. Troubleshooting flow
 
-## Symptom: Android browser opens endpoint, plugin still fails
+### Symptom: Android browser opens endpoint, plugin still fails
 
 Possible causes:
 
@@ -665,7 +669,7 @@ Actions:
 4. inspect logs
 5. retry with clean test vault
 
-## Symptom: Desktop works, Android does not
+### Symptom: Desktop works, Android does not
 
 Possible causes:
 
@@ -680,7 +684,7 @@ Actions:
 3. re-test on small clean vault
 4. compare logs between desktop and phone
 
-## Symptom: Initial restore incomplete or folders missing
+### Symptom: Initial restore incomplete or folders missing
 
 Possible causes:
 
@@ -695,7 +699,7 @@ Actions:
 3. retry from clean state
 4. confirm completion before further testing
 
-## Symptom: intermittent failures after it once worked
+### Symptom: intermittent failures after it once worked
 
 Possible causes:
 
@@ -716,49 +720,49 @@ Actions:
 
 ## 12. Project decisions
 
-## Decision 1
+### Decision 1
 
 Use **trusted HTTPS** from day one.
 
 Reason:
 Android requires it.
 
-## Decision 2
+### Decision 2
 
 Use **stable DNS hostname**, not ad hoc IP-based access.
 
 Reason:
 certificate trust and consistency.
 
-## Decision 3
+### Decision 3
 
 Use **desktop-first rollout**.
 
 Reason:
 reduces debugging complexity.
 
-## Decision 4
+### Decision 4
 
 Use **small test vault before real vault**.
 
 Reason:
 data safety.
 
-## Decision 5
+### Decision 5
 
 Use **setup wizard / setup URI**.
 
 Reason:
 fewer config mistakes.
 
-## Decision 6
+### Decision 6
 
 Use **Request API only if needed**, not blindly from the start.
 
 Reason:
 keep setup simple, but have a documented fallback ready.
 
-## Decision 7
+### Decision 7
 
 Do **not** stack Cloudflare or extra public proxy layers in v1.
 
