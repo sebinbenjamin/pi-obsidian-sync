@@ -5,7 +5,7 @@
 #   1. cp .env.example .env && edit .env
 #   2. docker compose up -d
 #   3. ./scripts/couchdb-init.sh   (first time only)
-#   4. tailscale serve --bg 5984
+#   4. sudo tailscale serve --bg --https 6984 http://127.0.0.1:5984
 
 services:
   couchdb:
@@ -22,7 +22,7 @@ services:
       - ${COUCHDB_DATA_PATH:-./couchdb-data}:/opt/couchdb/data
       - ./couchdb/local.ini:/opt/couchdb/etc/local.d/001-livesync.ini
 
-    # Localhost only; tailscale serve handles external HTTPS access
+    # Localhost only; tailscale serve (port 6984) handles external HTTPS access
     ports:
       - "127.0.0.1:5984:5984"
 

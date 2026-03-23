@@ -22,9 +22,9 @@ Obsidian (Desktop / Android)
         |
         | HTTPS (trusted Let's Encrypt cert)
         v
-https://<pi>.<tailnet>.ts.net
+https://<pi>.<tailnet>.ts.net:6984
         |
-        | tailscale serve (reverse proxy)
+        | tailscale serve (reverse proxy, port 6984)
         v
 127.0.0.1:5984
         |
@@ -63,13 +63,13 @@ docker compose up -d
 # 4. Initialize (first time only)
 ./scripts/couchdb-init.sh
 
-# 5. Enable HTTPS via Tailscale (requires sudo)
-sudo tailscale serve --bg 5984
+# 5. Enable HTTPS via Tailscale on port 6984 (requires sudo)
+sudo tailscale serve --bg --https 6984 http://127.0.0.1:5984
 
 # 6. Verify
-curl -u <user>:<pass> http://127.0.0.1:5984/_up   # Local check
+curl -u <user>:<pass> http://127.0.0.1:5984/_up          # Local check
 # From another device on your tailnet:
-curl https://<pi-hostname>.<tailnet>.ts.net/        # HTTPS check
+curl https://<pi-hostname>.<tailnet>.ts.net:6984/          # HTTPS check
 ```
 
 ## File Structure
@@ -95,17 +95,16 @@ docs/
 
 ```bash
 # Enable (persists across reboots, requires sudo)
-sudo tailscale serve --bg 5984
+sudo tailscale serve --bg --https 6984 http://127.0.0.1:5984
 
 # Check status
 sudo tailscale serve status
 
-# Disable (syntax varies by Tailscale version; try one of these)
-sudo tailscale serve reset
-# or: sudo tailscale serve off
+# Disable
+sudo tailscale serve --https 6984 off
 ```
 
-This gives you `https://<pi-hostname>.<tailnet>.ts.net` with a real Let's Encrypt certificate. No extra containers, no cert management, no public internet exposure.
+This gives you `https://<pi-hostname>.<tailnet>.ts.net:6984` with a real Let's Encrypt certificate. No extra containers, no cert management, no public internet exposure.
 
 **Why not Caddy/Traefik?** For a Tailscale-only deployment, `tailscale serve` is simpler and achieves the same result. If you later need more control (custom headers, path routing), add Caddy to the compose file.
 
@@ -117,7 +116,7 @@ Generate a setup URI on a desktop device to avoid manual configuration:
 
 ```bash
 # Install deno if not available: https://deno.land/
-export hostname=https://<pi-hostname>.<tailnet>.ts.net
+export hostname=https://<pi-hostname>.<tailnet>.ts.net:6984
 export database=obsidiannotes
 export passphrase=your-e2ee-passphrase    # For end-to-end encryption
 export username=<your COUCHDB_USER>
@@ -136,7 +135,7 @@ Then on each device:
 
 In the LiveSync plugin settings:
 
-- **URI**: `https://<pi-hostname>.<tailnet>.ts.net`
+- **URI**: `https://<pi-hostname>.<tailnet>.ts.net:6984`
 - **Username**: your `COUCHDB_USER`
 - **Password**: your `COUCHDB_PASSWORD`
 - **Database name**: `obsidiannotes` (or your choice)
@@ -290,7 +289,7 @@ Common causes:
 
 ### Android "Failed to fetch"
 
-1. Open `https://<pi-hostname>.<tailnet>.ts.net/` in Android browser. It should show CouchDB welcome JSON with no certificate warnings.
+1. Open `https://<pi-hostname>.<tailnet>.ts.net:6984/` in Android browser. It should show CouchDB welcome JSON with no certificate warnings.
 2. If cert warning: ensure Tailscale is connected on the Android device
 3. If no cert warning but plugin fails: enable **Use Request API** in LiveSync plugin settings
 4. Check CouchDB logs: `docker compose logs -f couchdb`
